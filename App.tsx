@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { RouteSegment, SegmentType, EventType, RouteMarker } from './types';
+import { RouteSegment, SegmentType, EventType, RouteMarker, SavedRoute } from './types';
 import { INITIAL_SEGMENTS, SEGMENT_CONFIG, EVENT_CONFIG } from './constants';
 import RoadCanvas from './components/RoadCanvas';
 import Controls from './components/Controls';
 import { analyzeRoute, generateRoute } from './services/geminiService';
-import { MessageSquare, X, Gauge, ArrowBigUp, ArrowBigDown, Repeat, ArrowLeftRight, Play, Pause, RotateCcw, Zap } from 'lucide-react';
+import { MessageSquare, X, Gauge, ArrowBigUp, ArrowBigDown, Repeat, ArrowLeftRight, Play, Pause, RotateCcw, Zap, Save, Trash2, FolderOpen, Calendar, Clock } from 'lucide-react';
 
 const App: React.FC = () => {
   const [segments, setSegments] = useState<RouteSegment[]>(INITIAL_SEGMENTS);
@@ -37,12 +37,66 @@ const App: React.FC = () => {
     screenY: number;
   } | null>(null);
 
+  // Save/Load Logic
+  const [savedRoutes, setSavedRoutes] = useState<SavedRoute[]>([]);
+  const [showSaveModal, setShowSaveModal] = useState(false);
+  const [showLoadModal, setShowLoadModal] = useState(false);
+  const [routeNameInput, setRouteNameInput] = useState('');
+
   const requestRef = useRef<number | undefined>(undefined);
   const lastTimeRef = useRef<number | undefined>(undefined);
   const overtakeTimeoutRef = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const totalRouteLength = segments.reduce((acc, seg) => acc + seg.length, 0);
+
+  // Load saved routes from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('navisim_routes');
+      if (stored) {
+        setSavedRoutes(JSON.parse(stored));
+      }
+    } catch (e) {
+      console.error("Failed to load routes", e);
+    }
+  }, []);
+
+  // Save Route Handler
+  const handleSaveRoute = () => {
+    if (!routeNameInput.trim()) return;
+    
+    const newRoute: SavedRoute = {
+      id: `route-${Date.now()}`,
+      name: routeNameInput.trim(),
+      timestamp: Date.now(),
+      segments: segments // Save current state
+    };
+    
+    const updatedRoutes = [newRoute, ...savedRoutes];
+    setSavedRoutes(updatedRoutes);
+    localStorage.setItem('navisim_routes', JSON.stringify(updatedRoutes));
+    
+    setShowSaveModal(false);
+    setRouteNameInput('');
+    setLogs(p => [`已存档: ${newRoute.name}`, ...p]);
+  };
+
+  // Load Route Handler
+  const handleLoadRoute = (route: SavedRoute) => {
+    setSegments(route.segments);
+    setSelectedSegmentId(route.segments[0]?.id || null);
+    resetSim();
+    setShowLoadModal(false);
+    setLogs(p => [`已加载存档: ${route.name}`, ...p]);
+  };
+
+  // Delete Route Handler
+  const handleDeleteRoute = (id: string) => {
+    const updatedRoutes = savedRoutes.filter(r => r.id !== id);
+    setSavedRoutes(updatedRoutes);
+    localStorage.setItem('navisim_routes', JSON.stringify(updatedRoutes));
+  };
 
   // Manual Controls Handler
   const handleKeyDown = useCallback((e: KeyboardEvent) => {
@@ -336,6 +390,11 @@ const App: React.FC = () => {
             generationLoading={isGenerating}
             viewMode={viewMode}
             onToggleView={() => setViewMode(v => v === 'driver' ? 'macro' : 'driver')}
+            onOpenSaveModal={() => {
+                setRouteNameInput(`路线练习-${new Date().toLocaleDateString()}`);
+                setShowSaveModal(true);
+            }}
+            onOpenLoadModal={() => setShowLoadModal(true)}
           />
       </div>
 
@@ -509,6 +568,84 @@ const App: React.FC = () => {
                 </div>
               </div>
             </div>
+         )}
+         
+         {/* SAVE ROUTE MODAL */}
+         {showSaveModal && (
+             <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                 <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm p-6 animate-in zoom-in-95">
+                     <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                         <Save size={18} className="text-blue-500" /> 保存当前路线
+                     </h3>
+                     <div className="mb-4">
+                         <label className="block text-xs text-slate-400 mb-1">路线名称</label>
+                         <input 
+                            type="text" 
+                            value={routeNameInput}
+                            onChange={(e) => setRouteNameInput(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-700 rounded p-2 text-white focus:border-blue-500 outline-none"
+                            placeholder="例如：科目三-难点练习"
+                            autoFocus
+                         />
+                     </div>
+                     <div className="flex justify-end gap-2">
+                         <button onClick={() => setShowSaveModal(false)} className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded text-slate-300 text-sm">取消</button>
+                         <button onClick={handleSaveRoute} className="px-4 py-2 bg-blue-600 hover:bg-blue-500 rounded text-white text-sm">确认保存</button>
+                     </div>
+                 </div>
+             </div>
+         )}
+
+         {/* LOAD ROUTE MODAL */}
+         {showLoadModal && (
+             <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                 <div className="bg-slate-800 border border-slate-700 rounded-xl shadow-2xl w-full max-w-lg flex flex-col max-h-[80vh] animate-in zoom-in-95">
+                     <div className="p-4 border-b border-slate-700 flex justify-between items-center bg-slate-800 rounded-t-xl">
+                        <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                            <FolderOpen size={18} className="text-amber-500" /> 我的路线库
+                        </h3>
+                        <button onClick={() => setShowLoadModal(false)} className="text-slate-400 hover:text-white"><X size={20}/></button>
+                     </div>
+                     
+                     <div className="flex-1 overflow-y-auto p-4 space-y-2 bg-slate-900/50">
+                        {savedRoutes.length === 0 ? (
+                            <div className="text-center py-12 text-slate-500">
+                                <p>暂无存档记录</p>
+                                <p className="text-xs mt-2">点击“存档”按钮保存您设计的路线</p>
+                            </div>
+                        ) : (
+                            savedRoutes.map(route => (
+                                <div key={route.id} className="bg-slate-800 border border-slate-700 rounded-lg p-3 hover:border-slate-500 transition-all group flex justify-between items-center">
+                                    <div className="flex-1 cursor-pointer" onClick={() => handleLoadRoute(route)}>
+                                        <div className="font-bold text-slate-200 group-hover:text-blue-400 transition-colors">{route.name}</div>
+                                        <div className="flex gap-3 mt-1 text-[10px] text-slate-500">
+                                            <span className="flex items-center gap-1"><Calendar size={10}/> {new Date(route.timestamp).toLocaleDateString()}</span>
+                                            <span className="flex items-center gap-1"><Clock size={10}/> {new Date(route.timestamp).toLocaleTimeString()}</span>
+                                            <span>长度: {route.segments.reduce((acc,s)=>acc+s.length,0)}米</span>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <button 
+                                            onClick={() => handleLoadRoute(route)}
+                                            className="p-2 bg-blue-600/20 text-blue-400 rounded hover:bg-blue-600 hover:text-white transition-colors"
+                                            title="加载"
+                                        >
+                                            <Play size={16} />
+                                        </button>
+                                        <button 
+                                            onClick={() => handleDeleteRoute(route.id)}
+                                            className="p-2 bg-red-600/10 text-red-500 rounded hover:bg-red-600 hover:text-white transition-colors"
+                                            title="删除"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                     </div>
+                 </div>
+             </div>
          )}
          
          {/* Analysis Modal */}

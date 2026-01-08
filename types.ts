@@ -1,3 +1,4 @@
+
 export enum SegmentType {
   STRAIGHT = 'STRAIGHT',
   TURN_LEFT = 'TURN_LEFT',
@@ -50,4 +51,11 @@ export interface Coordinates {
   x: number;
   y: number;
   angle: number;
+}
+
+export interface SavedRoute {
+  id: string;
+  name: string;
+  timestamp: number;
+  segments: RouteSegment[];
 }

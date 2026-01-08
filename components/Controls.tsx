@@ -1,7 +1,7 @@
 import React from 'react';
 import { RouteSegment, SegmentType, EventType } from '../types';
 import { SEGMENT_CONFIG, EVENT_CONFIG } from '../constants';
-import { Plus, Play, Pause, RotateCcw, Trash2, Wand2, Search, Settings2, Eye, Map } from 'lucide-react';
+import { Plus, Play, Pause, RotateCcw, Trash2, Wand2, Search, Settings2, Eye, Map, Save, FolderOpen } from 'lucide-react';
 
 interface ControlsProps {
   segments: RouteSegment[];
@@ -16,6 +16,8 @@ interface ControlsProps {
   isPlaying: boolean;
   onAnalyze: () => void;
   onGenerate: () => void;
+  onOpenSaveModal: () => void;
+  onOpenLoadModal: () => void;
   analysisLoading: boolean;
   generationLoading: boolean;
   viewMode: 'driver' | 'macro';
@@ -35,6 +37,8 @@ const Controls: React.FC<ControlsProps> = ({
   isPlaying,
   onAnalyze,
   onGenerate,
+  onOpenSaveModal,
+  onOpenLoadModal,
   analysisLoading,
   generationLoading,
   viewMode,
@@ -59,22 +63,38 @@ const Controls: React.FC<ControlsProps> = ({
       </div>
 
       {/* Main Actions */}
-      <div className="p-4 grid grid-cols-2 gap-2 border-b border-slate-800 shrink-0">
+      <div className="p-4 grid grid-cols-4 gap-2 border-b border-slate-800 shrink-0">
+         <button 
+           onClick={onOpenSaveModal}
+           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex flex-col items-center justify-center gap-1 transition-colors text-blue-300"
+           title="保存当前路线"
+         >
+           <Save size={16} />
+           存档
+         </button>
+         <button 
+           onClick={onOpenLoadModal}
+           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex flex-col items-center justify-center gap-1 transition-colors text-amber-300"
+           title="打开路线库"
+         >
+           <FolderOpen size={16} />
+           路线库
+         </button>
          <button 
            onClick={onGenerate}
            disabled={generationLoading}
-           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50 text-purple-300"
          >
-           {generationLoading ? <div className="animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></div> : <Wand2 size={14} className="text-purple-400"/>}
-           智能生成
+           {generationLoading ? <div className="animate-spin w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full"></div> : <Wand2 size={16} />}
+           AI生成
          </button>
          <button 
            onClick={onAnalyze}
            disabled={analysisLoading}
-           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+           className="col-span-1 bg-slate-800 hover:bg-slate-700 text-xs font-medium py-2 rounded flex flex-col items-center justify-center gap-1 transition-colors disabled:opacity-50 text-green-300"
          >
-           {analysisLoading ? <div className="animate-spin w-3 h-3 border-2 border-green-500 border-t-transparent rounded-full"></div> : <Search size={14} className="text-green-400"/>}
-           AI 评判
+           {analysisLoading ? <div className="animate-spin w-4 h-4 border-2 border-green-500 border-t-transparent rounded-full"></div> : <Search size={16} />}
+           AI评判
          </button>
       </div>
 
