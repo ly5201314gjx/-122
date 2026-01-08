@@ -1,0 +1,5 @@
+{
+  "name": "NaviSim: 科目三 AI 模拟器",
+  "description": "极简风格的高拟真驾驶考试模拟器。规划复杂路线，放置考试项目标记（换挡、变道等），并通过 AI 实时分析驾驶逻辑。",
+  "requestFramePermissions": []
+}
